@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -71,10 +72,39 @@ type View = "home" | "catalog" | "dashboard" | "account";
 type SectionTarget = "about" | "collections" | "fresh" | "contact";
 type Language = "id" | "en";
 
+type MidtransPaymentResult = {
+  order_id?: string;
+  payment_type?: string;
+  status_code?: string;
+  status_message?: string;
+  transaction_id?: string;
+  transaction_status?: string;
+};
+
+type SnapOptions = {
+  onSuccess?: (result: MidtransPaymentResult) => void;
+  onPending?: (result: MidtransPaymentResult) => void;
+  onError?: (result: MidtransPaymentResult) => void;
+  onClose?: () => void;
+};
+
+declare global {
+  interface Window {
+    snap?: {
+      pay: (token: string, options?: SnapOptions) => void;
+    };
+  }
+}
+
 const paymentMethods = ["GoPay", "OVO", "QRIS", "Virtual Account", "Kartu Debit"];
 const whatsappNumber = "6285162811421";
 const storeAddress = "Jakarta";
 const storeHours = "Setiap hari, 09:00 - 16:00";
+const midtransSnapScriptUrl =
+  process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
+    ? "https://app.midtrans.com/snap/snap.js"
+    : "https://app.sandbox.midtrans.com/snap/snap.js";
+const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
 
 const whatsappHref = (message: string) =>
   `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
@@ -427,7 +457,10 @@ export function PutisserieApp() {
     setCheckoutOpen(true);
   }
 
-  function completeCheckout(deliveryDetails: DeliveryDetails) {
+  function completeCheckout(
+    deliveryDetails: DeliveryDetails,
+    paymentResult?: MidtransPaymentResult,
+  ) {
     if (cartItems.length === 0) {
       return;
     }
@@ -452,7 +485,10 @@ export function PutisserieApp() {
         month: "long",
         year: "numeric",
       }).format(now),
-      status: "Dibayar",
+      status:
+        paymentResult?.transaction_status === "pending"
+          ? "Menunggu Pembayaran"
+          : "Dibayar",
       items: cartItems.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -462,7 +498,9 @@ export function PutisserieApp() {
       total,
       customer: deliveryDetails.name || "Pelanggan Putisserie",
       address: deliveryAddress,
-      payment: `Midtrans - ${paymentMethod}`,
+      payment: paymentResult?.payment_type
+        ? `Midtrans Sandbox - ${paymentResult.payment_type}`
+        : `Midtrans Sandbox - ${paymentMethod}`,
     };
 
     setOrders((current) => [newOrder, ...current]);
@@ -1591,11 +1629,17 @@ function CheckoutDialog({
   paymentMethod: string;
   onPaymentMethod: (method: string) => void;
   successOrder: Order | null;
-  onPay: (details: DeliveryDetails) => void;
+  onPay: (
+    details: DeliveryDetails,
+    paymentResult?: MidtransPaymentResult,
+  ) => void;
   onPrint: (order: Order) => void;
 }) {
   const [deliveryDetails, setDeliveryDetails] =
     useState<DeliveryDetails>(initialDeliveryDetails);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [snapReady, setSnapReady] = useState(false);
   const confirmationMessage = successOrder
     ? `Halo Putisserie, saya konfirmasi pembayaran untuk invoice ${successOrder.id}.`
     : "";
@@ -1612,6 +1656,51 @@ function CheckoutDialog({
     Boolean(deliveryDetails.district) &&
     Boolean(deliveryDetails.village) &&
     Boolean(deliveryDetails.deliveryDate);
+
+  useEffect(() => {
+    if (!open || successOrder) {
+      return;
+    }
+
+    if (!midtransClientKey) {
+      setSnapReady(false);
+      return;
+    }
+
+    if (window.snap) {
+      setSnapReady(true);
+      return;
+    }
+
+    const existingScript = document.getElementById(
+      "midtrans-snap-script",
+    ) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      const handleLoad = () => setSnapReady(Boolean(window.snap));
+      const handleError = () =>
+        setPaymentError("Gagal memuat Midtrans Snap. Coba refresh halaman.");
+
+      existingScript.addEventListener("load", handleLoad);
+      existingScript.addEventListener("error", handleError);
+
+      return () => {
+        existingScript.removeEventListener("load", handleLoad);
+        existingScript.removeEventListener("error", handleError);
+      };
+    }
+
+    const script = document.createElement("script");
+    script.id = "midtrans-snap-script";
+    script.src = midtransSnapScriptUrl;
+    script.async = true;
+    script.setAttribute("data-client-key", midtransClientKey);
+    script.onload = () => setSnapReady(Boolean(window.snap));
+    script.onerror = () =>
+      setPaymentError("Gagal memuat Midtrans Snap. Coba refresh halaman.");
+
+    document.body.appendChild(script);
+  }, [open, successOrder]);
 
   const updateDeliveryDetail = (field: keyof DeliveryDetails, value: string) => {
     setDeliveryDetails((current) => ({ ...current, [field]: value }));
@@ -1644,6 +1733,80 @@ function CheckoutDialog({
     }));
   };
 
+  const handleMidtransPay = async () => {
+    if (!canPay || isPaying) {
+      return;
+    }
+
+    setPaymentError("");
+
+    if (!midtransClientKey) {
+      setPaymentError("Client key Midtrans belum dikonfigurasi di environment.");
+      return;
+    }
+
+    if (!snapReady || !window.snap) {
+      setPaymentError("Midtrans Snap sedang dimuat. Tunggu sebentar lalu coba lagi.");
+      return;
+    }
+
+    setIsPaying(true);
+
+    try {
+      const response = await fetch("/api/midtrans/snap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+          deliveryDetails,
+          selectedPaymentMethod: paymentMethod,
+        }),
+      });
+      const data = (await response.json()) as {
+        token?: string;
+        message?: string;
+      };
+
+      if (!response.ok || !data.token) {
+        throw new Error(data.message ?? "Gagal membuat transaksi Midtrans.");
+      }
+
+      window.snap.pay(data.token, {
+        onSuccess: (result) => {
+          setIsPaying(false);
+          onPay(deliveryDetails, result);
+        },
+        onPending: (result) => {
+          setIsPaying(false);
+          onPay(deliveryDetails, result);
+        },
+        onError: (result) => {
+          setIsPaying(false);
+          setPaymentError(
+            result.status_message ??
+              "Pembayaran gagal diproses oleh Midtrans. Coba lagi.",
+          );
+        },
+        onClose: () => {
+          setIsPaying(false);
+          setPaymentError("Popup pembayaran ditutup sebelum transaksi selesai.");
+        },
+      });
+    } catch (error) {
+      setIsPaying(false);
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Gagal membuka pembayaran Midtrans.",
+      );
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-6xl overflow-hidden border-[#d2c3c4] bg-[#fff8f6] p-0 sm:w-[calc(100vw-2rem)]">
@@ -1651,7 +1814,9 @@ function CheckoutDialog({
           <div className="max-h-[88dvh] overflow-y-auto p-5 md:p-8">
             <DialogHeader>
               <DialogTitle className="text-2xl text-[#70585b] sm:text-3xl">
-                Pembayaran Berhasil
+                {successOrder.status === "Dibayar"
+                  ? "Pembayaran Berhasil"
+                  : "Pembayaran Diproses"}
               </DialogTitle>
               <DialogDescription>
                 Invoice {successOrder.id} sudah masuk ke histori pesanan.
@@ -1661,10 +1826,15 @@ function CheckoutDialog({
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5" />
                 <div>
-                  <p className="font-semibold">Pembayaran berhasil diproses</p>
+                  <p className="font-semibold">
+                    {successOrder.status === "Dibayar"
+                      ? "Pembayaran berhasil diproses"
+                      : "Transaksi dibuat dan menunggu pembayaran"}
+                  </p>
                   <p className="mt-1 text-sm">
-                    Invoice {successOrder.id} siap dicetak. Konfirmasi pesanan
-                    dapat langsung dikirim ke WhatsApp Putisserie.
+                    Invoice {successOrder.id} siap dicetak. Status Midtrans
+                    tersimpan di histori pesanan dan konfirmasi dapat dikirim ke
+                    WhatsApp Putisserie.
                   </p>
                 </div>
               </div>
@@ -1863,8 +2033,11 @@ function CheckoutDialog({
 
                 <div className="mt-6">
                   <Label className="font-['Plus_Jakarta_Sans'] text-xs uppercase tracking-widest text-[#70585b]">
-                    Payment Method
+                    Preferensi Metode Midtrans
                   </Label>
+                  <p className="mt-2 text-xs leading-5 text-[#807475]">
+                    Pilihan akhir tetap dibuka lewat popup Midtrans Sandbox.
+                  </p>
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {paymentMethods.map((method) => (
                       <button
@@ -1886,17 +2059,22 @@ function CheckoutDialog({
 
                 <Button
                   type="button"
-                  onClick={() => onPay(deliveryDetails)}
-                  disabled={!canPay}
+                  onClick={handleMidtransPay}
+                  disabled={!canPay || isPaying}
                   className="mt-6 h-14 w-full rounded-[1rem] bg-[#70585b] text-base text-white hover:bg-[#70585b]/90"
                 >
-                  Bayar Sekarang
+                  {isPaying ? "Membuka Midtrans..." : "Bayar via Midtrans"}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
                 {!canPay ? (
                   <p className="mt-3 text-center text-xs leading-5 text-[#807475]">
                     Lengkapi detail pengiriman dan pilihan wilayah Indonesia
                     sebelum melanjutkan pembayaran.
+                  </p>
+                ) : null}
+                {paymentError ? (
+                  <p className="mt-3 rounded-[0.9rem] border border-red-200 bg-red-50 p-3 text-center text-xs leading-5 text-red-700">
+                    {paymentError}
                   </p>
                 ) : null}
 
