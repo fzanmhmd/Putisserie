@@ -56,6 +56,13 @@
       "Segoe UI", sans-serif;
     letter-spacing: 0;
   }
+
+  #snap-midtrans,
+  .snap-midtrans,
+  iframe[name^="snap"],
+  iframe[src*="midtrans"] {
+    z-index: 2147483647 !important;
+  }
 }
 
 @media print {

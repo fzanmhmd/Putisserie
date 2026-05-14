@@ -53,6 +53,53 @@ export type Order = {
   payment: string;
 };
 
+export const baseDeliveryFee = 15000;
+export const checkoutServiceFee = 4500;
+
+const deliveryFeesByProvince: Record<string, number> = {
+  "DKI Jakarta": 15000,
+  Banten: 22000,
+  "Jawa Barat": 25000,
+  Lampung: 38000,
+  "Jawa Tengah": 42000,
+  "DI Yogyakarta": 42000,
+  "Jawa Timur": 48000,
+  Bali: 55000,
+  "Sumatera Selatan": 56000,
+  Bengkulu: 58000,
+  "Bangka Belitung": 58000,
+  Riau: 62000,
+  Jambi: 62000,
+  "Sumatera Barat": 65000,
+  "Sumatera Utara": 68000,
+  "Kepulauan Riau": 70000,
+  Aceh: 72000,
+  "Kalimantan Barat": 72000,
+  "Kalimantan Tengah": 76000,
+  "Kalimantan Selatan": 76000,
+  "Kalimantan Timur": 82000,
+  "Kalimantan Utara": 86000,
+  "Nusa Tenggara Barat": 74000,
+  "Nusa Tenggara Timur": 86000,
+  "Sulawesi Selatan": 78000,
+  "Sulawesi Barat": 80000,
+  "Sulawesi Tenggara": 84000,
+  "Sulawesi Tengah": 86000,
+  Gorontalo: 88000,
+  "Sulawesi Utara": 90000,
+  Maluku: 98000,
+  "Maluku Utara": 102000,
+  "Papua Barat Daya": 110000,
+  "Papua Barat": 112000,
+  Papua: 115000,
+  "Papua Tengah": 118000,
+  "Papua Pegunungan": 120000,
+  "Papua Selatan": 120000,
+};
+
+export const getDeliveryFeeByProvince = (province?: string) =>
+  province ? deliveryFeesByProvince[province] ?? 65000 : baseDeliveryFee;
+
 export const products: Product[] = [
   {
     id: "signature-strawberry-rose",

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { products } from "@/lib/putisserie-data";
+import {
+  checkoutServiceFee,
+  getDeliveryFeeByProvince,
+  products,
+} from "@/lib/putisserie-data";
 
 export const runtime = "nodejs";
 
@@ -24,11 +28,7 @@ type CheckoutDeliveryDetails = {
 type CheckoutRequest = {
   items?: CheckoutItem[];
   deliveryDetails?: CheckoutDeliveryDetails;
-  selectedPaymentMethod?: string;
 };
-
-const deliveryFee = 15000;
-const serviceFee = 4500;
 
 const getMidtransEndpoint = () =>
   process.env.MIDTRANS_IS_PRODUCTION === "true"
@@ -115,13 +115,14 @@ export async function POST(request: Request) {
     quantity,
     name: product!.name.slice(0, 50),
   }));
+  const deliveryFee = getDeliveryFeeByProvince(province);
   const grossAmount =
     productItemDetails.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     ) +
     deliveryFee +
-    serviceFee;
+    checkoutServiceFee;
   const orderId = `PUT-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
       },
       {
         id: "service-fee",
-        price: serviceFee,
+        price: checkoutServiceFee,
         quantity: 1,
         name: "Service Fee",
       },
@@ -180,10 +181,7 @@ export async function POST(request: Request) {
     },
     custom_field1: `Delivery: ${deliveryDate}`.slice(0, 255),
     custom_field2: `Area: ${district}, ${city}`.slice(0, 255),
-    custom_field3: `Preference: ${cleanText(body.selectedPaymentMethod) || "Snap"}`.slice(
-      0,
-      255,
-    ),
+    custom_field3: "Channel: Midtrans Snap",
   };
 
   let midtransResponse: Response;

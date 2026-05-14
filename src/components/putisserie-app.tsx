@@ -14,11 +14,13 @@ import {
   CreditCard,
   Gift,
   History,
+  Instagram,
   Lock,
   Mail,
   MapPin,
   MessageCircle,
   Minus,
+  Music2,
   PackageCheck,
   Plus,
   Printer,
@@ -56,8 +58,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  baseDeliveryFee,
   categories,
+  checkoutServiceFee,
   formatCurrency,
+  getDeliveryFeeByProvince,
   heroImages,
   initialOrders,
   products,
@@ -96,7 +101,7 @@ declare global {
   }
 }
 
-const paymentMethods = ["GoPay", "OVO", "QRIS", "Virtual Account", "Kartu Debit"];
+const acceptedPaymentMethods = ["Midtrans", "GoPay", "DANA", "ShopeePay", "Bank"];
 const whatsappNumber = "6285162811421";
 const storeAddress = "Jakarta";
 const storeHours = "Setiap hari, 09:00 - 16:00";
@@ -367,7 +372,6 @@ export function PutisserieApp() {
   const [checkoutSuccess, setCheckoutSuccess] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<Order>(initialOrders[0]);
-  const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
 
   const filteredProducts = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -389,8 +393,8 @@ export function PutisserieApp() {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const deliveryFee = cartCount > 0 ? 15000 : 0;
-  const serviceFee = cartCount > 0 ? 4500 : 0;
+  const deliveryFee = cartCount > 0 ? baseDeliveryFee : 0;
+  const serviceFee = cartCount > 0 ? checkoutServiceFee : 0;
   const total = subtotal + deliveryFee + serviceFee;
 
   function goTo(nextView: View) {
@@ -475,6 +479,8 @@ export function PutisserieApp() {
     ]
       .filter(Boolean)
       .join(", ");
+    const orderDeliveryFee = getDeliveryFeeByProvince(deliveryDetails.province);
+    const orderTotal = subtotal + orderDeliveryFee + serviceFee;
     const newOrder: Order = {
       id: `INV-PUT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(
         2,
@@ -495,17 +501,18 @@ export function PutisserieApp() {
         price: item.product.price,
         image: item.product.image,
       })),
-      total,
+      total: orderTotal,
       customer: deliveryDetails.name || "Pelanggan Putisserie",
       address: deliveryAddress,
       payment: paymentResult?.payment_type
         ? `Midtrans Sandbox - ${paymentResult.payment_type}`
-        : `Midtrans Sandbox - ${paymentMethod}`,
+        : "Midtrans Sandbox",
     };
 
     setOrders((current) => [newOrder, ...current]);
     setInvoiceOrder(newOrder);
     setCheckoutSuccess(newOrder);
+    setCheckoutOpen(true);
     setCartItems([]);
   }
 
@@ -590,9 +597,6 @@ export function PutisserieApp() {
         subtotal={subtotal}
         deliveryFee={deliveryFee}
         serviceFee={serviceFee}
-        total={total}
-        paymentMethod={paymentMethod}
-        onPaymentMethod={setPaymentMethod}
         successOrder={checkoutSuccess}
         onPay={completeCheckout}
         onPrint={printInvoice}
@@ -828,8 +832,8 @@ function HomeView({
             </div>
             <div className="grid max-w-lg grid-cols-3 gap-2 pt-3 sm:gap-3 sm:pt-4">
               <Metric value="9+" label="Produk" />
-              <Metric value="15 rb" label="Ongkir" />
-              <Metric value="WA" label="Support" />
+              <Metric value="15 rb+" label="Ongkir" />
+              <Metric value="3" label="Medsos" />
             </div>
           </div>
 
@@ -987,9 +991,9 @@ function HomeView({
             </div>
           </div>
           <div className="grid gap-4">
-            <ContactCard icon={<MapPin />} title="Alamat" text={storeAddress} />
-            <ContactCard icon={<Truck />} title="Jam Pickup" text={storeHours} />
-            <ContactCard icon={<CreditCard />} title="Pembayaran" text="Midtrans, QRIS, e-wallet, dan virtual account" />
+            <ContactCard icon={<Instagram />} title="Instagram" text="@putisserie.id" />
+            <ContactCard icon={<Music2 />} title="TikTok" text="@putisserie.id" />
+            <ContactCard icon={<ShoppingBag />} title="Shopee" text="Putisserie Official" />
           </div>
         </div>
       </section>
@@ -1586,6 +1590,9 @@ function CartSheet({
           <div className="w-full space-y-3">
             <PriceRow label="Subtotal" value={subtotal} />
             <PriceRow label="Delivery Fee" value={deliveryFee} />
+            <p className="text-xs leading-5 text-[#807475]">
+              Ongkir final mengikuti provinsi tujuan di detail pengiriman.
+            </p>
             <PriceRow label="Service Fee" value={serviceFee} />
             <Separator className="bg-[#d2c3c4]/50" />
             <PriceRow label="Total Amount" value={total} strong />
@@ -1612,9 +1619,6 @@ function CheckoutDialog({
   subtotal,
   deliveryFee,
   serviceFee,
-  total,
-  paymentMethod,
-  onPaymentMethod,
   successOrder,
   onPay,
   onPrint,
@@ -1625,9 +1629,6 @@ function CheckoutDialog({
   subtotal: number;
   deliveryFee: number;
   serviceFee: number;
-  total: number;
-  paymentMethod: string;
-  onPaymentMethod: (method: string) => void;
   successOrder: Order | null;
   onPay: (
     details: DeliveryDetails,
@@ -1656,6 +1657,9 @@ function CheckoutDialog({
     Boolean(deliveryDetails.district) &&
     Boolean(deliveryDetails.village) &&
     Boolean(deliveryDetails.deliveryDate);
+  const checkoutDeliveryFee =
+    items.length > 0 ? getDeliveryFeeByProvince(deliveryDetails.province) : deliveryFee;
+  const checkoutTotal = subtotal + checkoutDeliveryFee + serviceFee;
 
   useEffect(() => {
     if (!open || successOrder) {
@@ -1764,7 +1768,6 @@ function CheckoutDialog({
             quantity: item.quantity,
           })),
           deliveryDetails,
-          selectedPaymentMethod: paymentMethod,
         }),
       });
       const data = (await response.json()) as {
@@ -1776,27 +1779,33 @@ function CheckoutDialog({
         throw new Error(data.message ?? "Gagal membuat transaksi Midtrans.");
       }
 
-      window.snap.pay(data.token, {
-        onSuccess: (result) => {
-          setIsPaying(false);
-          onPay(deliveryDetails, result);
-        },
-        onPending: (result) => {
-          setIsPaying(false);
-          onPay(deliveryDetails, result);
-        },
-        onError: (result) => {
-          setIsPaying(false);
-          setPaymentError(
-            result.status_message ??
-              "Pembayaran gagal diproses oleh Midtrans. Coba lagi.",
-          );
-        },
-        onClose: () => {
-          setIsPaying(false);
-          setPaymentError("Popup pembayaran ditutup sebelum transaksi selesai.");
-        },
-      });
+      const snapToken = data.token;
+      onOpenChange(false);
+      window.setTimeout(() => {
+        window.snap?.pay(snapToken, {
+          onSuccess: (result) => {
+            setIsPaying(false);
+            onPay(deliveryDetails, result);
+          },
+          onPending: (result) => {
+            setIsPaying(false);
+            onPay(deliveryDetails, result);
+          },
+          onError: (result) => {
+            setIsPaying(false);
+            setPaymentError(
+              result.status_message ??
+                "Pembayaran gagal diproses oleh Midtrans. Coba lagi.",
+            );
+            onOpenChange(true);
+          },
+          onClose: () => {
+            setIsPaying(false);
+            setPaymentError("Popup pembayaran ditutup sebelum transaksi selesai.");
+            onOpenChange(true);
+          },
+        });
+      }, 120);
     } catch (error) {
       setIsPaying(false);
       setPaymentError(
@@ -1814,31 +1823,61 @@ function CheckoutDialog({
           <div className="max-h-[88dvh] overflow-y-auto p-5 md:p-8">
             <DialogHeader>
               <DialogTitle className="text-2xl text-[#70585b] sm:text-3xl">
-                {successOrder.status === "Dibayar"
-                  ? "Pembayaran Berhasil"
-                  : "Pembayaran Diproses"}
+                Invoice Putisserie
               </DialogTitle>
               <DialogDescription>
-                Invoice {successOrder.id} sudah masuk ke histori pesanan.
+                Invoice {successOrder.id} siap dikirim ke penjual.
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-6 rounded-[1.25rem] border border-[#d8eadb] bg-[#e8f5eb] p-5 text-[#1f5130]">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5" />
+
+            <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-[#ede0dd] bg-white shadow-[0_12px_35px_rgba(74,66,64,0.06)]">
+              <div className="flex flex-col gap-3 border-b border-[#ede0dd] bg-[#f8ebe8] p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="font-semibold">
-                    {successOrder.status === "Dibayar"
-                      ? "Pembayaran berhasil diproses"
-                      : "Transaksi dibuat dan menunggu pembayaran"}
+                  <p className="font-['Plus_Jakarta_Sans'] text-xs font-bold uppercase tracking-widest text-[#807475]">
+                    Nomor Invoice
                   </p>
-                  <p className="mt-1 text-sm">
-                    Invoice {successOrder.id} siap dicetak. Status Midtrans
-                    tersimpan di histori pesanan dan konfirmasi dapat dikirim ke
-                    WhatsApp Putisserie.
-                  </p>
+                  <h3 className="mt-1 text-2xl font-bold text-[#70585b]">
+                    {successOrder.id}
+                  </h3>
+                </div>
+                <Badge className="w-fit rounded-full bg-[#e8f5eb] px-3 py-1 text-[#1f5130] hover:bg-[#e8f5eb]">
+                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                  {successOrder.status}
+                </Badge>
+              </div>
+
+              <div className="grid gap-4 p-5 sm:grid-cols-2">
+                <InvoiceInfo label="Nama" value={successOrder.customer} />
+                <InvoiceInfo label="Tanggal" value={successOrder.date} />
+                <InvoiceInfo label="Pembayaran" value={successOrder.payment} />
+                <InvoiceInfo label="Total" value={formatCurrency(successOrder.total)} />
+                <div className="sm:col-span-2">
+                  <InvoiceInfo label="Alamat" value={successOrder.address} />
+                </div>
+              </div>
+
+              <div className="border-t border-[#ede0dd] p-5">
+                <p className="font-['Plus_Jakarta_Sans'] text-xs font-bold uppercase tracking-widest text-[#807475]">
+                  Detail Pesanan
+                </p>
+                <div className="mt-3 space-y-3">
+                  {successOrder.items.map((item) => (
+                    <div
+                      key={`${successOrder.id}-${item.name}`}
+                      className="flex items-center justify-between gap-4 text-sm"
+                    >
+                      <span className="text-[#4f4445]">
+                        {item.quantity}x {item.name}
+                      </span>
+                      <span className="font-semibold text-[#70585b]">
+                        {formatCurrency(item.price * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+
             <DialogFooter className="mt-6 gap-2 sm:justify-start [&>button]:w-full [&>button]:sm:w-auto">
               <Button
                 onClick={() => onPrint(successOrder)}
@@ -1858,7 +1897,7 @@ function CheckoutDialog({
                   rel="noreferrer"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  Konfirmasi ke WA
+                  Kirim ke Penjual
                 </a>
               </Button>
             </DialogFooter>
@@ -2010,11 +2049,15 @@ function CheckoutDialog({
                 </h2>
                 <div className="space-y-3">
                   <PriceRow label="Subtotal" value={subtotal} />
-                  <PriceRow label="Delivery Fee" value={deliveryFee} />
+                  <PriceRow label="Delivery Fee" value={checkoutDeliveryFee} />
                   <PriceRow label="Service Fee" value={serviceFee} />
                   <Separator className="my-4 bg-[#d2c3c4]/60" />
-                  <PriceRow label="Total Amount" value={total} strong />
+                  <PriceRow label="Total Amount" value={checkoutTotal} strong />
                 </div>
+                <p className="mt-3 text-xs leading-5 text-[#807475]">
+                  Ongkir dihitung otomatis dari provinsi tujuan. Pilih provinsi
+                  untuk melihat estimasi final sebelum membayar.
+                </p>
 
                 <div className="mt-6 rounded-[1.25rem] border border-[#d2c3c4]/40 bg-white/60 p-4">
                   <Label className="font-['Plus_Jakarta_Sans'] text-xs uppercase tracking-widest text-[#70585b]">
@@ -2031,39 +2074,13 @@ function CheckoutDialog({
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <Label className="font-['Plus_Jakarta_Sans'] text-xs uppercase tracking-widest text-[#70585b]">
-                    Preferensi Metode Midtrans
-                  </Label>
-                  <p className="mt-2 text-xs leading-5 text-[#807475]">
-                    Pilihan akhir tetap dibuka lewat popup Midtrans Sandbox.
-                  </p>
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {paymentMethods.map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => onPaymentMethod(method)}
-                        className={cn(
-                          "rounded-full border px-3 py-2 text-sm transition-colors",
-                          paymentMethod === method
-                            ? "border-[#70585b] bg-[#70585b] text-white"
-                            : "border-[#d2c3c4] bg-white/60 text-[#4f4445] hover:bg-white",
-                        )}
-                      >
-                        {method}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <Button
                   type="button"
                   onClick={handleMidtransPay}
                   disabled={!canPay || isPaying}
                   className="mt-6 h-14 w-full rounded-[1rem] bg-[#70585b] text-base text-white hover:bg-[#70585b]/90"
                 >
-                  {isPaying ? "Membuka Midtrans..." : "Bayar via Midtrans"}
+                  Bayar
                   <ArrowRight className="h-5 w-5" />
                 </Button>
                 {!canPay ? (
@@ -2083,18 +2100,14 @@ function CheckoutDialog({
                     Accepted Payment Methods
                   </p>
                   <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-bold">
-                    <span className="text-blue-900">mid</span>
-                    <span className="-ml-2 text-sky-500">trans</span>
-                    <span className="rounded bg-[#00AED6] px-2 py-1 text-white">
-                      GOPAY
-                    </span>
-                    <span className="rounded bg-[#4C2A86] px-2 py-1 text-white">
-                      OVO
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[#5f5f59]">
-                      <CreditCard className="h-3.5 w-3.5" />
-                      BANK
-                    </span>
+                    {acceptedPaymentMethods.map((method) => (
+                      <span
+                        key={method}
+                        className="rounded-full border border-[#d2c3c4]/60 bg-white px-3 py-1.5 text-[#70585b]"
+                      >
+                        {method}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
@@ -2249,14 +2262,12 @@ function Footer({
           onNavigate={onNavigate}
         />
         <FooterColumn
-          title="Support"
+          title="Social"
           links={[
-            ["Account", "account"],
-            ["Order Status", "account"],
-            ["Payment Methods", "account"],
+            ["Instagram", "https://www.instagram.com/putisserie.id/"],
+            ["TikTok", "https://www.tiktok.com/@putisserie.id"],
+            ["Shopee", "https://shopee.co.id/putisserie"],
           ]}
-          onSection={onSection}
-          onNavigate={onNavigate}
         />
         <div>
           <h3 className="font-['Plus_Jakarta_Sans'] text-sm font-bold uppercase tracking-widest text-[#70585b]">
@@ -2757,6 +2768,17 @@ function PriceRow({
   );
 }
 
+function InvoiceInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="font-['Plus_Jakarta_Sans'] text-[11px] font-bold uppercase tracking-wider text-[#807475]">
+        {label}
+      </p>
+      <p className="mt-1 font-semibold leading-6 text-[#70585b]">{value}</p>
+    </div>
+  );
+}
+
 function CheckoutField({
   label,
   placeholder,
@@ -2822,7 +2844,7 @@ function CheckoutSelect({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required={required}
-        className="h-12 w-full rounded-[1rem] border border-[#d2c3c4]/70 bg-[#fff8f6] px-5 text-sm text-[#201a19] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:border-[#70585b] focus:ring-2 focus:ring-[#70585b]/20 [&:invalid]:text-[#807475]/50"
+        className="h-12 w-full rounded-[1rem] border border-[#d2c3c4]/70 bg-[#fff8f6] px-5 text-sm text-[#201a19] outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:border-[#70585b] focus:ring-2 focus:ring-[#70585b]/20 [&:invalid]:text-[#807475]/50 [&_option]:bg-white [&_option]:text-[#201a19]"
       >
         <option value="">{placeholder}</option>
         {options.map((option) => (
@@ -2910,9 +2932,9 @@ function FooterColumn({
   onNavigate,
 }: {
   title: string;
-  links: Array<[string, View | `section:${SectionTarget}`]>;
-  onSection: (section: SectionTarget) => void;
-  onNavigate: (view: View) => void;
+  links: Array<[string, View | `section:${SectionTarget}` | `https://${string}`]>;
+  onSection?: (section: SectionTarget) => void;
+  onNavigate?: (view: View) => void;
 }) {
   return (
     <div>
@@ -2920,23 +2942,39 @@ function FooterColumn({
         {title}
       </h3>
       <div className="mt-4 flex flex-col gap-3">
-        {links.map(([label, target]) => (
-          <button
-            key={`${title}-${label}`}
-            type="button"
-            onClick={() => {
-              if (target.startsWith("section:")) {
-                onSection(target.replace("section:", "") as SectionTarget);
-                return;
-              }
+        {links.map(([label, target]) => {
+          if (target.startsWith("https://")) {
+            return (
+              <a
+                key={`${title}-${label}`}
+                href={target}
+                target="_blank"
+                rel="noreferrer"
+                className="w-fit text-[#4f4445] underline-offset-4 hover:text-[#70585b] hover:underline"
+              >
+                {label}
+              </a>
+            );
+          }
 
-              onNavigate(target as View);
-            }}
-            className="w-fit text-[#4f4445] underline-offset-4 hover:text-[#70585b] hover:underline"
-          >
-            {label}
-          </button>
-        ))}
+          return (
+            <button
+              key={`${title}-${label}`}
+              type="button"
+              onClick={() => {
+                if (target.startsWith("section:")) {
+                  onSection?.(target.replace("section:", "") as SectionTarget);
+                  return;
+                }
+
+                onNavigate?.(target as View);
+              }}
+              className="w-fit text-[#4f4445] underline-offset-4 hover:text-[#70585b] hover:underline"
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
