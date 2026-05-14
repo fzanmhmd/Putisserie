@@ -1,0 +1,77 @@
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&family=Quicksand:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 12 100% 98%;
+    --foreground: 15 13% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 15 13% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 15 13% 11%;
+    --primary: 352 12% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 5% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 11 42% 95%;
+    --muted-foreground: 352 8% 29%;
+    --accent: 47 100% 76%;
+    --accent-foreground: 43 100% 7%;
+    --destructive: 0 74% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 356 16% 79%;
+    --input: 356 16% 79%;
+    --ring: 352 12% 39%;
+    --berry: 352 12% 39%;
+    --mint: 60 16% 88%;
+    --cocoa: 15 13% 11%;
+    --lemon: 47 100% 76%;
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family:
+      "Quicksand", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #invoice-print,
+  #invoice-print * {
+    visibility: visible;
+  }
+
+  #invoice-print {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 32px;
+  }
+}
