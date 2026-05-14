@@ -320,7 +320,7 @@ const appCopy = {
     contactText:
       "Hubungi Putisserie untuk konsultasi ukuran cake, request kartu ucapan, jadwal pickup, atau bantuan pembayaran. Tim kami siap bantu lewat WhatsApp dan email.",
     whatsapp: "WhatsApp",
-    email: "hello@putisserie.id",
+    email: "pastry@putisserie.id",
     footerText:
       "Membuat momen manis yang elegan melalui cake artisanal dan bahan berkualitas.",
   },
@@ -353,7 +353,7 @@ const appCopy = {
     contactText:
       "Contact Putisserie for cake sizing, greeting card requests, pickup schedules, or payment help. Our team can help through WhatsApp and email.",
     whatsapp: "WhatsApp",
-    email: "hello@putisserie.id",
+    email: "pastry@putisserie.id",
     footerText:
       "Crafting elegant sweet moments through artisanal cakes and high-quality ingredients.",
   },
