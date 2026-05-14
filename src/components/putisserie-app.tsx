@@ -610,12 +610,12 @@ function Header({
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#d2c3c4]/40 bg-[#fff8f6]/92 backdrop-blur-md shadow-[0_4px_20px_rgba(74,66,64,0.05)]">
-      <div className="mx-auto flex h-20 max-w-[1200px] items-center justify-between px-4 md:px-8">
-        <div className="flex items-center gap-6 md:gap-8">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 md:h-20 md:px-8">
+        <div className="flex min-w-0 items-center gap-4 md:gap-8">
           <button
             type="button"
             onClick={() => onSection("about")}
-            className="font-['Quicksand'] text-3xl font-bold tracking-normal text-[#70585b] md:text-[34px]"
+            className="shrink-0 font-['Quicksand'] text-2xl font-bold tracking-normal text-[#70585b] md:text-[34px]"
           >
             Putisserie
           </button>
@@ -641,7 +641,7 @@ function Header({
           </nav>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
           <div
             className="hidden items-center rounded-full border border-[#d2c3c4]/70 bg-white/60 p-1 sm:flex"
             aria-label={t.language}
@@ -680,10 +680,52 @@ function Header({
           <Button
             type="button"
             onClick={onOrderNow}
-            className="rounded-full bg-[#70585b] px-5 text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#70585b]/90 hover:shadow-[0_10px_22px_rgba(112,88,91,0.18)]"
+            className="rounded-full bg-[#70585b] px-3 text-xs text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#70585b]/90 hover:shadow-[0_10px_22px_rgba(112,88,91,0.18)] sm:px-5 sm:text-sm"
           >
-            {t.orderNow}
+            <span className="hidden sm:inline">{t.orderNow}</span>
+            <span className="sm:hidden">{language === "id" ? "Pesan" : "Order"}</span>
           </Button>
+        </div>
+      </div>
+      <div className="border-t border-[#d2c3c4]/30 px-4 py-2 md:hidden">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {navItems.map((item) => {
+            const active = view === "home" && activeSection === item.section;
+
+            return (
+              <button
+                key={`mobile-${item.label}`}
+                type="button"
+                onClick={() => onSection(item.section)}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-2 font-['Plus_Jakarta_Sans'] text-xs font-semibold text-[#5f5f59] transition-all duration-300 hover:bg-[#f8ebe8] hover:text-[#70585b]",
+                  active && "bg-[#70585b] text-white hover:bg-[#70585b] hover:text-white",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+          <div
+            className="ml-auto flex shrink-0 items-center rounded-full border border-[#d2c3c4]/70 bg-white/70 p-1"
+            aria-label={t.language}
+          >
+            {(["id", "en"] as const).map((item) => (
+              <button
+                key={`mobile-language-${item}`}
+                type="button"
+                onClick={() => onLanguage(item)}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase transition-all duration-300 hover:bg-[#f8ebe8] hover:text-[#70585b]",
+                  language === item
+                    ? "bg-[#70585b] text-white shadow-sm hover:bg-[#70585b] hover:text-white"
+                    : "text-[#807475]",
+                )}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </header>
@@ -709,22 +751,22 @@ function HomeView({
     <>
       <section
         id="about"
-        className="relative scroll-mt-24 overflow-hidden px-4 py-12 md:px-8 md:py-20"
+        className="relative scroll-mt-32 overflow-hidden px-4 py-10 md:scroll-mt-24 md:px-8 md:py-20"
       >
-        <div className="mx-auto grid max-w-[1200px] items-center gap-12 md:grid-cols-[0.95fr_1.05fr]">
-          <div className="space-y-6">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 md:grid-cols-[0.95fr_1.05fr] md:gap-12">
+          <div className="space-y-5 md:space-y-6">
             <Badge className="rounded-full bg-[#fadadd] px-4 py-1.5 text-[#574144] hover:bg-[#fadadd]">
               <Sparkles className="mr-1 h-3.5 w-3.5" />
               {t.aboutBadge}
             </Badge>
             <div className="space-y-4">
-              <h1 className="max-w-xl text-5xl font-bold leading-tight text-[#70585b] md:text-6xl">
+              <h1 className="max-w-xl text-4xl font-bold leading-tight text-[#70585b] sm:text-5xl md:text-6xl">
                 {t.aboutTitle}
               </h1>
-              <p className="max-w-lg text-base leading-8 text-[#4f4445] md:text-lg">
+              <p className="max-w-lg text-[15px] leading-7 text-[#4f4445] md:text-lg md:leading-8">
                 {t.aboutText}
               </p>
-              <p className="max-w-lg text-base leading-8 text-[#4f4445]">
+              <p className="max-w-lg text-[15px] leading-7 text-[#4f4445] md:text-base md:leading-8">
                 {t.aboutTextSecond}
               </p>
             </div>
@@ -732,7 +774,7 @@ function HomeView({
               <Button
                 type="button"
                 onClick={() => onSection("fresh")}
-                className="rounded-full bg-[#70585b] px-8 py-6 text-white shadow-[0_12px_24px_rgba(112,88,91,0.18)] hover:bg-[#70585b]/90"
+                className="rounded-full bg-[#70585b] px-6 py-5 text-white shadow-[0_12px_24px_rgba(112,88,91,0.18)] hover:bg-[#70585b]/90 sm:px-8 sm:py-6"
               >
                 {t.startOrder}
                 <ArrowRight className="h-4 w-4" />
@@ -741,12 +783,12 @@ function HomeView({
                 type="button"
                 variant="outline"
                 onClick={() => onSection("collections")}
-                className="rounded-full border-[#e9c349] px-8 py-6 text-[#70585b] hover:bg-[#f8ebe8]"
+                className="rounded-full border-[#e9c349] px-6 py-5 text-[#70585b] hover:bg-[#f8ebe8] sm:px-8 sm:py-6"
               >
                 {t.viewCollections}
               </Button>
             </div>
-            <div className="grid max-w-lg grid-cols-3 gap-3 pt-4">
+            <div className="grid max-w-lg grid-cols-3 gap-2 pt-3 sm:gap-3 sm:pt-4">
               <Metric value="9+" label="Produk" />
               <Metric value="15 rb" label="Ongkir" />
               <Metric value="WA" label="Support" />
@@ -754,8 +796,8 @@ function HomeView({
           </div>
 
           <div className="relative mx-auto w-full max-w-[620px]">
-            <div className="absolute -right-12 -top-12 h-72 w-72 rounded-full bg-[#fadadd]/50 blur-3xl" />
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#f8ebe8] shadow-[0_24px_70px_rgba(74,66,64,0.12)] md:aspect-[5/4]">
+            <div className="absolute -right-12 -top-12 h-52 w-52 rounded-full bg-[#fadadd]/50 blur-3xl sm:h-72 sm:w-72" />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-[#f8ebe8] shadow-[0_24px_70px_rgba(74,66,64,0.12)] md:aspect-[5/4] md:rounded-[2rem]">
               <Image
                 src={heroImages.cake}
                 alt="Putisserie signature cake"
@@ -765,11 +807,11 @@ function HomeView({
                 className="object-cover"
               />
             </div>
-            <div className="absolute -bottom-7 left-4 grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-[#ffe088] to-[#e9c349] p-4 text-center text-[#241a00] shadow-[0_12px_30px_rgba(233,195,73,0.25)] md:-left-7">
-              <span className="text-xs font-bold uppercase tracking-widest">
+            <div className="absolute -bottom-5 left-3 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-[#ffe088] to-[#e9c349] p-3 text-center text-[#241a00] shadow-[0_12px_30px_rgba(233,195,73,0.25)] sm:h-28 sm:w-28 sm:p-4 md:-left-7">
+              <span className="text-[10px] font-bold uppercase tracking-widest sm:text-xs">
                 New
               </span>
-              <span className="font-['Quicksand'] text-sm font-bold leading-tight">
+              <span className="font-['Quicksand'] text-xs font-bold leading-tight sm:text-sm">
                 Chef&apos;s Choice
               </span>
             </div>
@@ -779,7 +821,7 @@ function HomeView({
 
       <section
         id="collections"
-        className="scroll-mt-24 bg-[#fef1ee] px-4 py-16 md:px-8 md:py-20"
+        className="scroll-mt-32 bg-[#fef1ee] px-4 py-14 md:scroll-mt-24 md:px-8 md:py-20"
       >
         <SectionIntro
           title={t.collectionsTitle}
@@ -800,7 +842,7 @@ function HomeView({
 
       <section
         id="fresh"
-        className="scroll-mt-24 px-4 py-16 md:px-8 md:py-20"
+        className="scroll-mt-32 px-4 py-14 md:scroll-mt-24 md:px-8 md:py-20"
       >
         <div className="mx-auto max-w-[1200px]">
           <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -834,7 +876,7 @@ function HomeView({
         </div>
       </section>
 
-      <section className="bg-[#fadadd]/35 px-4 py-16 md:px-8 md:py-20">
+      <section className="bg-[#fadadd]/35 px-4 py-14 md:px-8 md:py-20">
         <div className="mx-auto grid max-w-[1200px] gap-10 md:grid-cols-2 md:items-center">
           <div className="space-y-5">
             <h2 className="text-3xl font-semibold text-[#70585b]">
@@ -876,7 +918,7 @@ function HomeView({
 
       <section
         id="contact"
-        className="scroll-mt-24 px-4 py-16 md:px-8 md:py-20"
+        className="scroll-mt-32 px-4 py-14 md:scroll-mt-24 md:px-8 md:py-20"
       >
         <div className="mx-auto grid max-w-[1200px] gap-8 rounded-[2rem] bg-[#fef1ee] p-6 shadow-[0_14px_40px_rgba(74,66,64,0.06)] md:grid-cols-[1fr_0.9fr] md:p-10">
           <div>
@@ -935,20 +977,20 @@ function CatalogView({
   onProduct: (product: Product) => void;
 }) {
   return (
-    <section className="px-4 pb-20 pt-12 md:px-8">
+    <section className="px-4 pb-20 pt-8 md:px-8 md:pt-12">
       <div className="mx-auto max-w-[1200px]">
-        <div className="relative overflow-hidden rounded-[2rem] bg-[#fef1ee] px-6 py-12 text-center md:px-12">
+        <div className="relative overflow-hidden rounded-[1.5rem] bg-[#fef1ee] px-5 py-10 text-center md:rounded-[2rem] md:px-12 md:py-12">
           <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#fadadd]/60 blur-3xl" />
           <div className="relative mx-auto max-w-3xl">
-            <h1 className="text-5xl font-bold text-[#70585b]">Tambah Produk</h1>
-            <p className="mt-4 text-lg leading-8 text-[#4f4445]">
+            <h1 className="text-4xl font-bold text-[#70585b] md:text-5xl">Tambah Produk</h1>
+            <p className="mt-4 text-base leading-7 text-[#4f4445] md:text-lg md:leading-8">
               Katalog lengkap Putisserie dengan stok, harga, detail produk,
               filter kategori, dan tombol cart yang langsung bisa digunakan.
             </p>
           </div>
         </div>
 
-        <div className="sticky top-20 z-20 -mx-4 mt-8 border-y border-[#d2c3c4]/40 bg-[#fff8f6]/85 px-4 py-5 backdrop-blur-md md:mx-0 md:rounded-full md:border md:px-5">
+        <div className="sticky top-[116px] z-20 -mx-4 mt-8 border-y border-[#d2c3c4]/40 bg-[#fff8f6]/90 px-4 py-4 backdrop-blur-md md:top-20 md:mx-0 md:rounded-full md:border md:px-5 md:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {categories.map((item) => (
@@ -980,7 +1022,7 @@ function CatalogView({
           </div>
         </div>
 
-        <div className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 md:mt-12 lg:grid-cols-3 lg:gap-y-14">
           {visibleProducts.map((product) => (
             <CatalogProductCard
               key={product.id}
@@ -1427,7 +1469,7 @@ function CartSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex h-full flex-col overflow-hidden border-[#d2c3c4] bg-[#fff8f6] sm:max-w-lg">
+      <SheetContent className="flex h-full w-full max-w-full flex-col overflow-hidden border-[#d2c3c4] bg-[#fff8f6] p-4 sm:max-w-lg sm:p-6">
         <SheetHeader>
           <SheetTitle className="text-[#70585b]">Shopping Bag</SheetTitle>
           <SheetDescription>
@@ -1454,9 +1496,9 @@ function CartSheet({
             items.map((item) => (
               <div
                 key={item.product.id}
-                className="grid grid-cols-[92px_1fr] gap-4 rounded-[1.25rem] border border-[#ede0dd] bg-white p-4 shadow-[0_4px_20px_rgba(74,66,64,0.04)]"
+                className="grid grid-cols-[76px_1fr] gap-3 rounded-[1.25rem] border border-[#ede0dd] bg-white p-3 shadow-[0_4px_20px_rgba(74,66,64,0.04)] sm:grid-cols-[92px_1fr] sm:gap-4 sm:p-4"
               >
-                <div className="relative h-[92px] w-[92px] overflow-hidden rounded-[1rem]">
+                <div className="relative h-[76px] w-[76px] overflow-hidden rounded-[1rem] sm:h-[92px] sm:w-[92px]">
                   <Image
                     src={item.product.image}
                     alt={item.product.name}
@@ -1468,7 +1510,7 @@ function CartSheet({
                 <div className="min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-['Quicksand'] text-lg font-semibold leading-tight text-[#70585b]">
+                      <p className="font-['Quicksand'] text-base font-semibold leading-tight text-[#70585b] sm:text-lg">
                         {item.product.name}
                       </p>
                       <p className="mt-1 text-sm text-[#5f5f59]">
@@ -1604,11 +1646,11 @@ function CheckoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl border-[#d2c3c4] bg-[#fff8f6] p-0">
+      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-6xl overflow-hidden border-[#d2c3c4] bg-[#fff8f6] p-0 sm:w-[calc(100vw-2rem)]">
         {successOrder ? (
-          <div className="p-6 md:p-8">
+          <div className="max-h-[88dvh] overflow-y-auto p-5 md:p-8">
             <DialogHeader>
-              <DialogTitle className="text-3xl text-[#70585b]">
+              <DialogTitle className="text-2xl text-[#70585b] sm:text-3xl">
                 Pembayaran Berhasil
               </DialogTitle>
               <DialogDescription>
@@ -1627,7 +1669,7 @@ function CheckoutDialog({
                 </div>
               </div>
             </div>
-            <DialogFooter className="mt-6 gap-2 sm:justify-start">
+            <DialogFooter className="mt-6 gap-2 sm:justify-start [&>button]:w-full [&>button]:sm:w-auto">
               <Button
                 onClick={() => onPrint(successOrder)}
                 className="rounded-full bg-[#70585b] text-white hover:bg-[#70585b]/90"
@@ -1653,9 +1695,9 @@ function CheckoutDialog({
           </div>
         ) : (
           <div>
-            <div className="border-b border-[#d2c3c4]/40 px-6 py-5 md:px-8">
+            <div className="border-b border-[#d2c3c4]/40 px-5 py-4 md:px-8 md:py-5">
               <DialogHeader>
-                <DialogTitle className="flex items-center justify-center gap-2 text-3xl text-[#70585b]">
+                <DialogTitle className="flex items-center justify-center gap-2 text-2xl text-[#70585b] sm:text-3xl">
                   Putisserie
                 </DialogTitle>
                 <DialogDescription className="flex items-center justify-center gap-2 font-['Plus_Jakarta_Sans'] text-xs font-semibold uppercase tracking-widest">
@@ -1664,11 +1706,11 @@ function CheckoutDialog({
                 </DialogDescription>
               </DialogHeader>
             </div>
-            <div className="grid max-h-[76vh] gap-8 overflow-y-auto p-6 md:grid-cols-[1fr_440px] md:p-8">
-              <div className="space-y-8">
+            <div className="grid max-h-[calc(92dvh-5rem)] gap-6 overflow-y-auto p-4 sm:p-6 md:grid-cols-[1fr_440px] md:gap-8 md:p-8">
+              <div className="space-y-6 md:space-y-8">
                 <section>
-                  <div className="mb-5 flex items-center justify-between">
-                    <h2 className="text-3xl font-semibold text-[#70585b]">
+                  <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
+                    <h2 className="text-2xl font-semibold text-[#70585b] sm:text-3xl">
                       Your Selection
                     </h2>
                     <Badge className="rounded-full bg-[#fadadd] text-[#765e61] hover:bg-[#fadadd]">
@@ -1679,9 +1721,9 @@ function CheckoutDialog({
                     {items.map((item) => (
                       <div
                         key={`checkout-${item.product.id}`}
-                        className="flex gap-4 rounded-[1.25rem] border border-[#ede0dd] bg-white p-4 shadow-[0_4px_20px_rgba(112,88,91,0.05)]"
+                        className="flex gap-3 rounded-[1.25rem] border border-[#ede0dd] bg-white p-3 shadow-[0_4px_20px_rgba(112,88,91,0.05)] sm:gap-4 sm:p-4"
                       >
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[1rem]">
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[1rem] sm:h-20 sm:w-20">
                           <Image
                             src={item.product.image}
                             alt={item.product.name}
@@ -1690,16 +1732,16 @@ function CheckoutDialog({
                             className="object-cover"
                           />
                         </div>
-                        <div className="flex flex-1 items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                           <div>
-                            <h3 className="font-['Quicksand'] text-lg font-semibold text-[#70585b]">
+                            <h3 className="font-['Quicksand'] text-base font-semibold leading-tight text-[#70585b] sm:text-lg">
                               {item.product.name}
                             </h3>
                             <p className="text-sm text-[#4f4445]">
                               {item.quantity}x {item.product.short}
                             </p>
                           </div>
-                          <p className="font-semibold text-[#70585b]">
+                          <p className="font-semibold text-[#70585b] sm:text-right">
                             {formatCurrency(item.product.price * item.quantity)}
                           </p>
                         </div>
@@ -1708,8 +1750,8 @@ function CheckoutDialog({
                   </div>
                 </section>
 
-                <section className="rounded-[1.5rem] border border-[#ede0dd] bg-white p-6 shadow-[0_4px_20px_rgba(112,88,91,0.05)]">
-                  <h2 className="mb-6 flex items-center gap-3 text-3xl font-semibold text-[#70585b]">
+                <section className="rounded-[1.5rem] border border-[#ede0dd] bg-white p-4 shadow-[0_4px_20px_rgba(112,88,91,0.05)] sm:p-6">
+                  <h2 className="mb-5 flex items-center gap-3 text-2xl font-semibold text-[#70585b] sm:mb-6 sm:text-3xl">
                     <Truck className="h-6 w-6" />
                     Detail Pengiriman
                   </h2>
@@ -1792,8 +1834,8 @@ function CheckoutDialog({
                 </section>
               </div>
 
-              <aside className="h-fit rounded-[2rem] border border-white/60 bg-[#f8ebe8] p-6 shadow-[0_18px_50px_rgba(74,66,64,0.08)]">
-                <h2 className="mb-6 text-3xl font-semibold text-[#70585b]">
+              <aside className="h-fit rounded-[1.5rem] border border-white/60 bg-[#f8ebe8] p-4 shadow-[0_18px_50px_rgba(74,66,64,0.08)] sm:p-6 md:rounded-[2rem]">
+                <h2 className="mb-5 text-2xl font-semibold text-[#70585b] sm:mb-6 sm:text-3xl">
                   Order Summary
                 </h2>
                 <div className="space-y-3">
@@ -1808,7 +1850,7 @@ function CheckoutDialog({
                   <Label className="font-['Plus_Jakarta_Sans'] text-xs uppercase tracking-widest text-[#70585b]">
                     Promo Code
                   </Label>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Input
                       placeholder="Masukkan kode promo"
                       className="rounded-[1rem] border-[#d2c3c4] bg-white"
@@ -1823,7 +1865,7 @@ function CheckoutDialog({
                   <Label className="font-['Plus_Jakarta_Sans'] text-xs uppercase tracking-widest text-[#70585b]">
                     Payment Method
                   </Label>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {paymentMethods.map((method) => (
                       <button
                         key={method}
@@ -1878,7 +1920,7 @@ function CheckoutDialog({
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[#d2c3c4]/50 pt-5">
+                <div className="mt-6 grid grid-cols-1 gap-3 border-t border-[#d2c3c4]/50 pt-5 sm:grid-cols-2">
                   <TrustPill icon={<ShieldCheck />} title="Secure" text="256-bit" />
                   <TrustPill icon={<Sparkles />} title="Fresh" text="Baked daily" />
                 </div>
@@ -1906,9 +1948,9 @@ function ProductDialog({
 
   return (
     <Dialog open={Boolean(product)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl border-[#d2c3c4] bg-[#fff8f6]">
-        <div className="grid gap-8 md:grid-cols-[0.95fr_1.05fr]">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-[#f8ebe8] shadow-[0_10px_40px_rgba(74,66,64,0.08)]">
+      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl overflow-y-auto border-[#d2c3c4] bg-[#fff8f6] p-4 sm:w-[calc(100vw-2rem)] sm:p-6">
+        <div className="grid gap-6 md:grid-cols-[0.95fr_1.05fr] md:gap-8">
+          <div className="relative aspect-[16/11] overflow-hidden rounded-[1.5rem] bg-[#f8ebe8] shadow-[0_10px_40px_rgba(74,66,64,0.08)] sm:aspect-[4/5] md:rounded-[2rem]">
             <Image
               src={product.image}
               alt={product.name}
@@ -1917,20 +1959,20 @@ function ProductDialog({
               className="object-cover"
             />
             {product.badge ? (
-              <div className="absolute left-5 top-5 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[#e9c349] via-[#ffe088] to-[#e9c349] p-2 text-center font-['Plus_Jakarta_Sans'] text-[10px] font-bold uppercase leading-tight text-[#241a00] shadow-[0_10px_24px_rgba(115,92,0,0.18)]">
+              <div className="absolute left-4 top-4 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-[#e9c349] via-[#ffe088] to-[#e9c349] p-2 text-center font-['Plus_Jakarta_Sans'] text-[9px] font-bold uppercase leading-tight text-[#241a00] shadow-[0_10px_24px_rgba(115,92,0,0.18)] sm:left-5 sm:top-5 sm:h-16 sm:w-16 sm:text-[10px]">
                 {product.badge}
               </div>
             ) : null}
           </div>
-          <div className="flex flex-col gap-6 py-2">
+          <div className="flex flex-col gap-5 py-1 sm:gap-6 sm:py-2">
             <DialogHeader>
               <Badge className="w-fit rounded-full bg-[#fadadd] text-[#765e61] hover:bg-[#fadadd]">
                 {product.category}
               </Badge>
-              <DialogTitle className="text-4xl leading-tight text-[#201a19] md:text-5xl">
+              <DialogTitle className="text-3xl leading-tight text-[#201a19] sm:text-4xl md:text-5xl">
                 {product.name}
               </DialogTitle>
-              <DialogDescription className="text-lg italic text-[#debfc2]">
+              <DialogDescription className="text-base italic text-[#70585b] sm:text-lg">
                 {product.short}
               </DialogDescription>
             </DialogHeader>
@@ -1938,13 +1980,13 @@ function ProductDialog({
               <p className="font-['Plus_Jakarta_Sans'] text-xs font-bold uppercase tracking-widest text-[#70585b]">
                 Deskripsi Cake
               </p>
-              <p className="mt-3 text-base leading-8 text-[#4f4445]">
+              <p className="mt-3 text-sm leading-7 text-[#4f4445] sm:text-base sm:leading-8">
                 {product.description} Dibuat dalam batch kecil, dikemas rapi,
                 dan cocok untuk pickup, pengiriman, atau hadiah.
               </p>
             </div>
-            <div className="flex items-baseline gap-4">
-              <span className="font-['Quicksand'] text-4xl font-bold text-[#70585b]">
+            <div className="flex flex-wrap items-baseline gap-3 sm:gap-4">
+              <span className="font-['Quicksand'] text-3xl font-bold text-[#70585b] sm:text-4xl">
                 {formatCurrency(product.price)}
               </span>
               {product.compareAt ? (
@@ -1953,7 +1995,7 @@ function ProductDialog({
                 </span>
               ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InfoTile icon={<Sparkles />} label="Rating" value={`${product.rating}/5`} />
               <InfoTile icon={<PackageCheck />} label="Stock" value={`${product.stock} pcs`} />
               <InfoTile icon={<Truck />} label="Ready" value={product.prepTime} />
@@ -1969,7 +2011,7 @@ function ProductDialog({
                 </span>
               ))}
             </div>
-            <DialogFooter className="mt-auto">
+            <DialogFooter className="mt-auto gap-2 sm:justify-end [&>button]:w-full [&>button]:sm:w-auto">
               <Button
                 variant="outline"
                 onClick={onClose}
@@ -2059,10 +2101,10 @@ function Footer({
 function Metric({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="font-['Quicksand'] text-3xl font-bold text-[#70585b]">
+      <div className="font-['Quicksand'] text-2xl font-bold text-[#70585b] sm:text-3xl">
         {value}
       </div>
-      <div className="mt-1 font-['Plus_Jakarta_Sans'] text-xs font-semibold uppercase tracking-wider text-[#5f5f59]">
+      <div className="mt-1 font-['Plus_Jakarta_Sans'] text-[10px] font-semibold uppercase tracking-wider text-[#5f5f59] sm:text-xs">
         {label}
       </div>
     </div>
@@ -2072,8 +2114,8 @@ function Metric({ value, label }: { value: string; label: string }) {
 function SectionIntro({ title, text }: { title: string; text: string }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-3xl font-semibold text-[#70585b]">{title}</h2>
-      <p className="mt-3 leading-7 text-[#5f5f59]">{text}</p>
+      <h2 className="text-2xl font-semibold text-[#70585b] sm:text-3xl">{title}</h2>
+      <p className="mt-3 text-sm leading-7 text-[#5f5f59] sm:text-base">{text}</p>
     </div>
   );
 }
@@ -2119,13 +2161,13 @@ function CollectionProductCard({
           </p>
         </div>
       </button>
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-['Plus_Jakarta_Sans'] text-[11px] font-bold uppercase tracking-wider text-[#807475]">
               {product.category}
             </p>
-            <h3 className="mt-1 font-['Quicksand'] text-xl font-bold leading-tight text-[#70585b]">
+            <h3 className="mt-1 font-['Quicksand'] text-lg font-bold leading-tight text-[#70585b] sm:text-xl">
               {product.name}
             </h3>
           </div>
@@ -2144,14 +2186,14 @@ function CollectionProductCard({
             {product.prepTime}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-3 pt-1">
+        <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-['Plus_Jakarta_Sans'] text-sm font-bold text-[#70585b]">
             {formatCurrency(product.price)}
           </p>
           <Button
             type="button"
             onClick={() => onAdd(product)}
-            className="rounded-full bg-[#70585b] px-4 text-white hover:bg-[#70585b]/90"
+            className="w-full rounded-full bg-[#70585b] px-4 text-white hover:bg-[#70585b]/90 sm:w-auto"
           >
             <ShoppingBag className="h-4 w-4" />
             {cta}
@@ -2234,26 +2276,26 @@ function CatalogProductCard({
           </span>
         ) : null}
       </button>
-      <h3 className="font-['Quicksand'] text-2xl font-semibold text-[#201a19]">
+      <h3 className="font-['Quicksand'] text-xl font-semibold leading-tight text-[#201a19] sm:text-2xl">
         {product.name}
       </h3>
       <p className="mt-2 italic text-[#4f4445]">{product.short}</p>
       <p className="mt-2 font-['Plus_Jakarta_Sans'] text-sm font-semibold text-[#70585b]">
         {formatCurrency(product.price)}
       </p>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex w-full gap-2 sm:w-auto">
         <Button
           type="button"
           onClick={() => onProduct(product)}
           variant="outline"
-          className="rounded-full border-[#d2c3c4] bg-transparent text-[#70585b]"
+          className="flex-1 rounded-full border-[#d2c3c4] bg-transparent text-[#70585b] sm:flex-none"
         >
           Detail
         </Button>
         <Button
           type="button"
           onClick={() => onAdd(product)}
-          className="rounded-full bg-[#70585b] px-7 text-white hover:bg-[#70585b]/90"
+          className="flex-1 rounded-full bg-[#70585b] px-5 text-white hover:bg-[#70585b]/90 sm:flex-none sm:px-7"
         >
           <ShoppingBag className="h-4 w-4" />
           Order Cart
