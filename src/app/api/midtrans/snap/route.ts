@@ -54,6 +54,24 @@ const toPositiveInteger = (value: unknown) => {
 const cleanText = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
+const getJakartaDateInputValue = (offsetDays = 0) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+  }).formatToParts(date);
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+};
+
+const isDeliveryDateAllowed = (value: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  value >= getJakartaDateInputValue(1);
+
 export async function POST(request: Request) {
   const serverKey = process.env.MIDTRANS_SERVER_KEY;
 
@@ -97,6 +115,13 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       { message: "Lengkapi detail pengiriman sebelum membayar." },
+      { status: 400 },
+    );
+  }
+
+  if (!isDeliveryDateAllowed(deliveryDate)) {
+    return NextResponse.json(
+      { message: "Tanggal pengiriman minimal H+1 dari hari ini." },
       { status: 400 },
     );
   }

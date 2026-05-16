@@ -116,6 +116,25 @@ const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
 const whatsappHref = (message: string) =>
   `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
+const getJakartaDateInputValue = (offsetDays = 0) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+  }).formatToParts(date);
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+};
+
+const getMinimumDeliveryDate = () => getJakartaDateInputValue(1);
+
+const isDeliveryDateAllowed = (value: string, minimumDate: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) && value >= minimumDate;
+
 type DeliveryDetails = {
   name: string;
   phone: string;
@@ -1696,6 +1715,11 @@ function CheckoutDialog({
   const cityOptions = getCityOptions(deliveryDetails.province);
   const districtOptions = getDistrictOptions(deliveryDetails.city);
   const villageOptions = getVillageOptions(deliveryDetails.district);
+  const minimumDeliveryDate = getMinimumDeliveryDate();
+  const isDeliveryDateValid = isDeliveryDateAllowed(
+    deliveryDetails.deliveryDate,
+    minimumDeliveryDate,
+  );
   const canPay =
     items.length > 0 &&
     Boolean(deliveryDetails.name.trim()) &&
@@ -1705,7 +1729,7 @@ function CheckoutDialog({
     Boolean(deliveryDetails.city) &&
     Boolean(deliveryDetails.district) &&
     Boolean(deliveryDetails.village) &&
-    Boolean(deliveryDetails.deliveryDate);
+    isDeliveryDateValid;
   const checkoutDeliveryFee =
     items.length > 0
       ? getDeliveryFeeByProvince(
@@ -2021,7 +2045,7 @@ function CheckoutDialog({
                   <div className="grid gap-5 md:grid-cols-2">
                     <CheckoutField
                       label="Nama Penerima"
-                      placeholder="masukan nama"
+                      placeholder="Masukan nama"
                       value={deliveryDetails.name}
                       onChange={(value) => updateDeliveryDetail("name", value)}
                       required
@@ -2081,6 +2105,7 @@ function CheckoutDialog({
                     <CheckoutField
                       label="Tanggal Pengiriman"
                       type="date"
+                      min={minimumDeliveryDate}
                       value={deliveryDetails.deliveryDate}
                       onChange={(value) =>
                         updateDeliveryDetail("deliveryDate", value)
@@ -2140,7 +2165,8 @@ function CheckoutDialog({
                 {!canPay ? (
                   <p className="mt-3 text-center text-xs leading-5 text-[#807475]">
                     Lengkapi detail pengiriman dan pilihan wilayah Indonesia
-                    sebelum melanjutkan pembayaran.
+                    sebelum melanjutkan pembayaran. Tanggal pengiriman minimal
+                    H+1 dari hari ini.
                   </p>
                 ) : null}
                 {paymentError ? (
@@ -2843,6 +2869,7 @@ function CheckoutField({
   value,
   onChange,
   required,
+  min,
 }: {
   label: string;
   placeholder?: string;
@@ -2851,6 +2878,7 @@ function CheckoutField({
   value?: string;
   onChange?: (value: string) => void;
   required?: boolean;
+  min?: string;
 }) {
   return (
     <div className={cn("space-y-2", className)}>
@@ -2864,6 +2892,7 @@ function CheckoutField({
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         required={required}
+        min={min}
         className="h-12 rounded-[1rem] border-[#d2c3c4]/70 bg-[#fff8f6] px-5 placeholder:text-[#807475]/50 focus-visible:ring-[#70585b]"
       />
     </div>
