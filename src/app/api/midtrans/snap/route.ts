@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 
 import {
   checkoutServiceFee,
+  fallbackDeliveryFeesByProvince,
   getDeliveryFeeByProvince,
-  products,
+  products as fallbackProducts,
 } from "@/lib/putisserie-data";
+import {
+  createCheckoutRecord,
+  getDeliveryFeesByProvince,
+  getStorefrontProducts,
+} from "@/lib/supabase-storefront";
 
 export const runtime = "nodejs";
 
@@ -95,9 +101,30 @@ export async function POST(request: Request) {
     );
   }
 
+  let activeProducts = fallbackProducts;
+  let deliveryFeesByProvince = fallbackDeliveryFeesByProvince;
+
+  try {
+    const [databaseProducts, databaseDeliveryFees] = await Promise.all([
+      getStorefrontProducts("service"),
+      getDeliveryFeesByProvince("service"),
+    ]);
+
+    if (databaseProducts.length > 0) {
+      activeProducts = databaseProducts;
+    }
+
+    if (Object.keys(databaseDeliveryFees).length > 0) {
+      deliveryFeesByProvince = databaseDeliveryFees;
+    }
+  } catch {
+    activeProducts = fallbackProducts;
+    deliveryFeesByProvince = fallbackDeliveryFeesByProvince;
+  }
+
   const checkoutItems = (body.items ?? [])
     .map((item) => ({
-      product: products.find((product) => product.id === item.productId),
+      product: activeProducts.find((product) => product.id === item.productId),
       quantity: toPositiveInteger(item.quantity),
     }))
     .filter((item) => item.product && item.quantity > 0);
@@ -115,12 +142,13 @@ export async function POST(request: Request) {
     quantity,
     name: product!.name.slice(0, 50),
   }));
-  const deliveryFee = getDeliveryFeeByProvince(province);
+  const subtotal = productItemDetails.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+  const deliveryFee = getDeliveryFeeByProvince(province, deliveryFeesByProvince);
   const grossAmount =
-    productItemDetails.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    ) +
+    subtotal +
     deliveryFee +
     checkoutServiceFee;
   const orderId = `PUT-${Date.now()}-${Math.random()
@@ -220,6 +248,48 @@ export async function POST(request: Request) {
           "Gagal membuat transaksi Midtrans.",
       },
       { status: midtransResponse.status || 502 },
+    );
+  }
+
+  try {
+    await createCheckoutRecord({
+      orderId,
+      items: checkoutItems.map(({ product, quantity }) => ({
+        product: product!,
+        quantity,
+      })),
+      deliveryDetails: {
+        name: customerName,
+        phone: customerPhone,
+        address: streetAddress,
+        province,
+        city,
+        district,
+        village,
+        deliveryDate,
+        note: cleanText(deliveryDetails.note),
+      },
+      subtotal,
+      deliveryFee,
+      serviceFee: checkoutServiceFee,
+      total: grossAmount,
+      snapToken: data.token,
+      redirectUrl: data.redirect_url,
+      midtransResponse: data,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message:
+          "Transaksi Midtrans dibuat, tetapi order gagal tersimpan ke Supabase. Coba lagi sebelum membayar.",
+        details:
+          process.env.NODE_ENV === "production"
+            ? undefined
+            : error instanceof Error
+              ? error.message
+              : "Unknown Supabase error",
+      },
+      { status: 502 },
     );
   }
 

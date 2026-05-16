@@ -8,6 +8,7 @@ export type ProductCategory =
 
 export type Product = {
   id: string;
+  databaseId?: string;
   name: string;
   category: Exclude<ProductCategory, "All">;
   short: string;
@@ -53,10 +54,16 @@ export type Order = {
   payment: string;
 };
 
+export type StoreSocial = {
+  platform: string;
+  label: string;
+  url: string;
+};
+
 export const baseDeliveryFee = 15000;
 export const checkoutServiceFee = 4500;
 
-const deliveryFeesByProvince: Record<string, number> = {
+export const fallbackDeliveryFeesByProvince: Record<string, number> = {
   "DKI Jakarta": 15000,
   Banten: 22000,
   "Jawa Barat": 25000,
@@ -97,8 +104,28 @@ const deliveryFeesByProvince: Record<string, number> = {
   "Papua Selatan": 120000,
 };
 
-export const getDeliveryFeeByProvince = (province?: string) =>
-  province ? deliveryFeesByProvince[province] ?? 65000 : baseDeliveryFee;
+export const getDeliveryFeeByProvince = (
+  province?: string,
+  feesByProvince: Record<string, number> = fallbackDeliveryFeesByProvince,
+) => (province ? feesByProvince[province] ?? 65000 : baseDeliveryFee);
+
+export const fallbackStoreSocials: StoreSocial[] = [
+  {
+    platform: "instagram",
+    label: "@putisserie.id",
+    url: "https://www.instagram.com/putisserie.id/",
+  },
+  {
+    platform: "tiktok",
+    label: "@putisserie.id",
+    url: "https://www.tiktok.com/@putisserie.id",
+  },
+  {
+    platform: "shopee",
+    label: "Putisserie Official",
+    url: "https://shopee.co.id/putisserie",
+  },
+];
 
 export const products: Product[] = [
   {

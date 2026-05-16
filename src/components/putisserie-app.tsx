@@ -58,19 +58,21 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  baseDeliveryFee,
   categories,
   checkoutServiceFee,
+  fallbackStoreSocials,
   formatCurrency,
   getDeliveryFeeByProvince,
   heroImages,
   initialOrders,
-  products,
+  products as fallbackProducts,
   type CartItem,
   type Order,
   type Product,
   type ProductCategory,
+  type StoreSocial,
 } from "@/lib/putisserie-data";
+import type { StorefrontData } from "@/lib/supabase-storefront";
 import { cn } from "@/lib/utils";
 
 type View = "home" | "catalog" | "dashboard" | "account";
@@ -359,7 +361,21 @@ const appCopy = {
   },
 } as const;
 
-export function PutisserieApp() {
+export function PutisserieApp({
+  storefrontData,
+}: {
+  storefrontData?: StorefrontData;
+}) {
+  const products =
+    storefrontData?.products && storefrontData.products.length > 0
+      ? storefrontData.products
+      : fallbackProducts;
+  const deliveryFeesByProvince =
+    storefrontData?.deliveryFeesByProvince ?? {};
+  const socials =
+    storefrontData?.socials && storefrontData.socials.length > 0
+      ? storefrontData.socials
+      : fallbackStoreSocials;
   const [view, setView] = useState<View>("home");
   const [language, setLanguage] = useState<Language>("id");
   const [activeSection, setActiveSection] = useState<SectionTarget>("about");
@@ -386,14 +402,17 @@ export function PutisserieApp() {
 
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [category, products, query]);
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const deliveryFee = cartCount > 0 ? baseDeliveryFee : 0;
+  const deliveryFee =
+    cartCount > 0
+      ? getDeliveryFeeByProvince(undefined, deliveryFeesByProvince)
+      : 0;
   const serviceFee = cartCount > 0 ? checkoutServiceFee : 0;
   const total = subtotal + deliveryFee + serviceFee;
 
@@ -479,13 +498,16 @@ export function PutisserieApp() {
     ]
       .filter(Boolean)
       .join(", ");
-    const orderDeliveryFee = getDeliveryFeeByProvince(deliveryDetails.province);
+    const orderDeliveryFee = getDeliveryFeeByProvince(
+      deliveryDetails.province,
+      deliveryFeesByProvince,
+    );
     const orderTotal = subtotal + orderDeliveryFee + serviceFee;
+    const generatedInvoiceId = `INV-PUT-${now.getFullYear()}${String(
+      now.getMonth() + 1,
+    ).padStart(2, "0")}-${String(orders.length + 42).padStart(3, "0")}`;
     const newOrder: Order = {
-      id: `INV-PUT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(
-        2,
-        "0",
-      )}-${String(orders.length + 42).padStart(3, "0")}`,
+      id: paymentResult?.order_id ?? generatedInvoiceId,
       date: new Intl.DateTimeFormat("id-ID", {
         day: "2-digit",
         month: "long",
@@ -543,6 +565,8 @@ export function PutisserieApp() {
           onSection={scrollToSection}
           onAddToCart={addToCart}
           onProduct={setSelectedProduct}
+          products={products}
+          socials={socials}
         />
       ) : null}
 
@@ -564,6 +588,7 @@ export function PutisserieApp() {
           onNavigate={goTo}
           onAddToCart={addToCart}
           onPrint={printInvoice}
+          products={products}
         />
       ) : null}
 
@@ -575,6 +600,7 @@ export function PutisserieApp() {
         language={language}
         onNavigate={goTo}
         onSection={scrollToSection}
+        socials={socials}
       />
 
       <CartSheet
@@ -600,6 +626,7 @@ export function PutisserieApp() {
         successOrder={checkoutSuccess}
         onPay={completeCheckout}
         onPrint={printInvoice}
+        deliveryFeesByProvince={deliveryFeesByProvince}
       />
 
       <ProductDialog
@@ -780,14 +807,19 @@ function HomeView({
   onSection,
   onAddToCart,
   onProduct,
+  products,
+  socials,
 }: {
   language: Language;
   onNavigate: (view: View) => void;
   onSection: (section: SectionTarget) => void;
   onAddToCart: (product: Product) => void;
   onProduct: (product: Product) => void;
+  products: Product[];
+  socials: StoreSocial[];
 }) {
   const t = appCopy[language];
+  const giftBoxImage = products[8]?.image ?? fallbackProducts[8].image;
 
   return (
     <>
@@ -947,7 +979,7 @@ function HomeView({
             </div>
             <div className="relative mt-8 h-64 overflow-hidden rounded-[1.5rem] shadow-[0_12px_28px_rgba(74,66,64,0.08)]">
               <Image
-                src={products[8].image}
+                src={giftBoxImage}
                 alt="Putisserie gift box"
                 fill
                 sizes="(min-width: 768px) 25vw, 50vw"
@@ -991,9 +1023,15 @@ function HomeView({
             </div>
           </div>
           <div className="grid gap-4">
-            <ContactCard icon={<Instagram />} title="Instagram" text="@putisserie.id" />
-            <ContactCard icon={<Music2 />} title="TikTok" text="@putisserie.id" />
-            <ContactCard icon={<ShoppingBag />} title="Shopee" text="Putisserie Official" />
+            {socials.map((social) => (
+              <ContactCard
+                key={social.platform}
+                icon={getSocialIcon(social.platform)}
+                title={getSocialTitle(social.platform)}
+                text={social.label}
+                href={social.url}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -1094,13 +1132,22 @@ function DashboardView({
   onNavigate,
   onAddToCart,
   onPrint,
+  products,
 }: {
   orders: Order[];
   onNavigate: (view: View) => void;
   onAddToCart: (product: Product) => void;
   onPrint: (order: Order) => void;
+  products: Product[];
 }) {
   const activeOrder = orders.find((order) => order.status !== "Selesai") ?? orders[0];
+  const reorderProduct = products[7] ?? products[0] ?? fallbackProducts[0];
+  const recommendedProducts = [
+    products[0],
+    products[7],
+    products[6],
+    products[8],
+  ].filter(Boolean) as Product[];
 
   return (
     <section className="px-4 pb-20 pt-10 md:px-8">
@@ -1128,7 +1175,7 @@ function DashboardView({
             <div className="flex flex-col gap-8 md:flex-row md:items-center">
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-[#fadadd]">
                 <Image
-                  src={activeOrder.items[0]?.image ?? products[0].image}
+                  src={activeOrder.items[0]?.image ?? reorderProduct.image}
                   alt={activeOrder.items[0]?.name ?? "Active order"}
                   fill
                   sizes="96px"
@@ -1162,7 +1209,7 @@ function DashboardView({
             </p>
             <Button
               type="button"
-              onClick={() => onAddToCart(products[7])}
+              onClick={() => onAddToCart(reorderProduct)}
               className="mt-10 w-full rounded-full bg-white text-[#70585b] hover:bg-[#fff8f6]"
             >
               <Sparkles className="h-4 w-4" />
@@ -1187,7 +1234,7 @@ function DashboardView({
               </button>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {[products[0], products[7], products[6], products[8]].map((product) => (
+              {recommendedProducts.map((product) => (
                 <RecommendationCard
                   key={product.id}
                   product={product}
@@ -1622,6 +1669,7 @@ function CheckoutDialog({
   successOrder,
   onPay,
   onPrint,
+  deliveryFeesByProvince,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1635,6 +1683,7 @@ function CheckoutDialog({
     paymentResult?: MidtransPaymentResult,
   ) => void;
   onPrint: (order: Order) => void;
+  deliveryFeesByProvince: Record<string, number>;
 }) {
   const [deliveryDetails, setDeliveryDetails] =
     useState<DeliveryDetails>(initialDeliveryDetails);
@@ -1658,7 +1707,12 @@ function CheckoutDialog({
     Boolean(deliveryDetails.village) &&
     Boolean(deliveryDetails.deliveryDate);
   const checkoutDeliveryFee =
-    items.length > 0 ? getDeliveryFeeByProvince(deliveryDetails.province) : deliveryFee;
+    items.length > 0
+      ? getDeliveryFeeByProvince(
+          deliveryDetails.province,
+          deliveryFeesByProvince,
+        )
+      : deliveryFee;
   const checkoutTotal = subtotal + checkoutDeliveryFee + serviceFee;
 
   useEffect(() => {
@@ -2232,12 +2286,18 @@ function Footer({
   language,
   onNavigate,
   onSection,
+  socials,
 }: {
   language: Language;
   onNavigate: (view: View) => void;
   onSection: (section: SectionTarget) => void;
+  socials: StoreSocial[];
 }) {
   const t = appCopy[language];
+  const socialLinks: Array<[string, string]> = socials.map((social) => [
+    getSocialTitle(social.platform),
+    social.url,
+  ]);
 
   return (
     <footer className="rounded-t-[1.5rem] bg-[#f8ebe8] px-4 py-14 md:px-8">
@@ -2263,11 +2323,7 @@ function Footer({
         />
         <FooterColumn
           title="Social"
-          links={[
-            ["Instagram", "https://www.instagram.com/putisserie.id/"],
-            ["TikTok", "https://www.tiktok.com/@putisserie.id"],
-            ["Shopee", "https://shopee.co.id/putisserie"],
-          ]}
+          links={socialLinks}
         />
         <div>
           <h3 className="font-['Plus_Jakarta_Sans'] text-sm font-bold uppercase tracking-widest text-[#70585b]">
@@ -2879,17 +2935,51 @@ function TrustPill({
   );
 }
 
+function getSocialIcon(platform: string) {
+  const normalized = platform.toLowerCase();
+
+  if (normalized.includes("instagram")) {
+    return <Instagram />;
+  }
+
+  if (normalized.includes("tiktok")) {
+    return <Music2 />;
+  }
+
+  return <ShoppingBag />;
+}
+
+function getSocialTitle(platform: string) {
+  const normalized = platform.toLowerCase();
+
+  if (normalized.includes("instagram")) {
+    return "Instagram";
+  }
+
+  if (normalized.includes("tiktok")) {
+    return "TikTok";
+  }
+
+  if (normalized.includes("shopee")) {
+    return "Shopee";
+  }
+
+  return platform;
+}
+
 function ContactCard({
   icon,
   title,
   text,
+  href,
 }: {
   icon: ReactNode;
   title: string;
   text: string;
+  href?: string;
 }) {
-  return (
-    <div className="flex items-start gap-4 rounded-[1.25rem] border border-white/70 bg-white/70 p-5 shadow-[0_8px_24px_rgba(74,66,64,0.04)]">
+  const content = (
+    <>
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fadadd] text-[#70585b] [&_svg]:h-5 [&_svg]:w-5">
         {icon}
       </span>
@@ -2899,6 +2989,25 @@ function ContactCard({
         </h3>
         <p className="mt-1 leading-6 text-[#4f4445]">{text}</p>
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-start gap-4 rounded-[1.25rem] border border-white/70 bg-white/70 p-5 shadow-[0_8px_24px_rgba(74,66,64,0.04)] transition-transform hover:-translate-y-1"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-4 rounded-[1.25rem] border border-white/70 bg-white/70 p-5 shadow-[0_8px_24px_rgba(74,66,64,0.04)]">
+      {content}
     </div>
   );
 }
@@ -2932,7 +3041,7 @@ function FooterColumn({
   onNavigate,
 }: {
   title: string;
-  links: Array<[string, View | `section:${SectionTarget}` | `https://${string}`]>;
+  links: Array<[string, View | `section:${SectionTarget}` | string]>;
   onSection?: (section: SectionTarget) => void;
   onNavigate?: (view: View) => void;
 }) {
@@ -2943,7 +3052,7 @@ function FooterColumn({
       </h3>
       <div className="mt-4 flex flex-col gap-3">
         {links.map(([label, target]) => {
-          if (target.startsWith("https://")) {
+          if (target.startsWith("http://") || target.startsWith("https://")) {
             return (
               <a
                 key={`${title}-${label}`}
