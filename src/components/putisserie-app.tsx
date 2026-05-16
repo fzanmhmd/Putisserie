@@ -344,6 +344,9 @@ const appCopy = {
     email: "pastry@putisserie.id",
     footerText:
       "Membuat momen manis yang elegan melalui cake artisanal dan bahan berkualitas.",
+    footerCredit:
+      "Buatan Muhammad Fauzan 2026. Dirancang sebagai storefront Putisserie yang modern, responsif, dan siap untuk pemesanan online.",
+    footerBadges: ["Responsive Storefront", "Secure Checkout", "Midtrans Payment"],
   },
   en: {
     nav: {
@@ -377,6 +380,9 @@ const appCopy = {
     email: "pastry@putisserie.id",
     footerText:
       "Crafting elegant sweet moments through artisanal cakes and high-quality ingredients.",
+    footerCredit:
+      "Built by Muhammad Fauzan 2026. Designed as a modern, responsive Putisserie storefront ready for online ordering.",
+    footerBadges: ["Responsive Storefront", "Secure Checkout", "Midtrans Payment"],
   },
 } as const;
 
@@ -2362,8 +2368,18 @@ function Footer({
           </p>
         </div>
       </div>
-      <div className="mx-auto mt-10 max-w-[1200px] border-t border-[#d2c3c4]/50 pt-6 text-sm text-[#807475]">
-        (c) 2026 Putisserie. Crafted with Sophisticated Sweetness.
+      <div className="mx-auto mt-10 flex max-w-[1200px] flex-col gap-4 border-t border-[#d2c3c4]/50 pt-6 text-sm text-[#807475] md:flex-row md:items-center md:justify-between">
+        <p className="max-w-2xl leading-6 text-[#5e5052]">{t.footerCredit}</p>
+        <div className="flex flex-wrap gap-2">
+          {t.footerBadges.map((badge) => (
+            <span
+              key={badge}
+              className="rounded-full border border-[#c7a6a0]/60 bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#70585b]"
+            >
+              {badge}
+            </span>
+          ))}
+        </div>
       </div>
     </footer>
   );
